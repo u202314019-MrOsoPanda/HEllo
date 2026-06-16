@@ -8,6 +8,9 @@ import io
 from dataclasses import asdict
 from functools import lru_cache
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from src.algoritmos import (
