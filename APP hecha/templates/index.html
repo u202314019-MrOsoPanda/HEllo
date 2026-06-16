@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartRoute WMS | Navegación en almacén</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <header class="hotbar">
+    <div class="brand">
+      <div class="brand-logo">🗺️</div>
+      <div><h1>SmartRoute WMS</h1></div>
+    </div>
+    <nav class="nav-links" id="navLinks" role="navigation" aria-label="Secciones principales">
+      <button data-nav="inicio" class="active" type="button" aria-label="Ir a Inicio">Inicio</button>
+      <button data-nav="beneficios" type="button" aria-label="Ir a Beneficios">Beneficios</button>
+      <button data-nav="productos" type="button" aria-label="Ir a Productos">Productos</button>
+      <button data-nav="operacion" type="button" aria-label="Ir a Navegar mapa">Navegar</button>
+      <button data-nav="sobre-app" type="button" aria-label="Sobre la aplicación">Sobre la app</button>
+    </nav>
+    <div class="hotbar-actions">
+      <button class="btn-cta-header" id="headerPanelBtn" type="button">Planificar ruta</button>
+    </div>
+  </header>
+
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <h3>Planificar envío</h3>
+      <button class="drawer-close" id="drawerClose" type="button" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <p class="drawer-intro">
+        Elija qué robot enviar, de qué estante recoger y hacia qué muelle despachar.
+        Como un GPS del almacén, pero en pasillos cortos.
+      </p>
+
+      <div class="form-group">
+        <label>Tipo de robot / vehículo</label>
+        <select id="robotType">
+          <option value="estandar">🤖 AGV Estándar</option>
+          <option value="pesado">📦 AGV Carga pesada</option>
+          <option value="express">⚡ AGV Express</option>
+          <option value="refrigerado">❄️ AGV Refrigerado</option>
+        </select>
+        <div class="node-hint" id="robotHint">Uso general en pasillos.</div>
+      </div>
+
+      <div class="form-group">
+        <label>Tráfico en el almacén</label>
+        <div class="traffic-options" id="trafficOptions">
+          <label class="traffic-opt" data-franja="baja"><input type="radio" name="franja" value="baja"> Tranquilo</label>
+          <label class="traffic-opt" data-franja="media"><input type="radio" name="franja" value="media"> Normal</label>
+          <label class="traffic-opt selected" data-franja="alta"><input type="radio" name="franja" value="alta" checked> Hora pico</label>
+        </div>
+      </div>
+
+      <div class="stock-preview panel" id="stockPreview">
+        <p class="stock-preview-title">Ubicación y stock</p>
+        <div class="stock-row"><span>Origen (recoger)</span><strong id="previewOriginLoc">—</strong></div>
+        <div class="stock-row"><span>Producto / SKU</span><strong id="previewOriginSku">—</strong></div>
+        <div class="stock-row highlight-stock"><span>Stock disponible</span><strong id="previewOriginStock">—</strong></div>
+        <div class="stock-divider"></div>
+        <div class="stock-row"><span>Destino (entregar)</span><strong id="previewDestLoc">—</strong></div>
+      </div>
+
+      <div class="form-group search-group">
+        <label for="searchQuery">Buscar nodo, SKU o producto</label>
+        <input type="search" id="searchQuery" placeholder="Ej: 437, SSD, SKU-00437, Monitor" autocomplete="off">
+        <div class="search-filters">
+          <button type="button" class="search-filter active" data-search-tipo="all">Todo</button>
+          <button type="button" class="search-filter" data-search-tipo="nodo">Nodo</button>
+          <button type="button" class="search-filter" data-search-tipo="producto">Producto</button>
+          <button type="button" class="search-filter" data-search-tipo="sku">SKU</button>
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="origin">Punto de recogida (nodo)</label>
+        <input type="number" id="origin" min="0" max="1499" value="101">
+      </div>
+      <div class="form-group">
+        <label for="dest">Punto de entrega (nodo)</label>
+        <input type="number" id="dest" min="0" max="1499" value="0">
+      </div>
+      <button class="btn btn-outline btn-random" id="btnRandom" type="button">🎲 Ruta aleatoria (demo)</button>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn btn-primary" id="btnCalcular" type="button">Ver ruta en el mapa</button>
+      <button class="btn btn-outline" id="btnAsignar" type="button">Enviar robot ahora</button>
+    </div>
+  </aside>
+
+  <div id="landing" class="view active">
+
+    <section class="landing-hero" id="top">
+      <div class="landing-hero-text">
+        <p class="eyebrow">GPS DE SU ALMACÉN</p>
+        <h2>Recoja en el estante, <span class="highlight">llegue al despacho</span> por la mejor ruta.</h2>
+        <p class="lead">
+          Usted elige: qué robot enviar, qué producto recoger y a qué muelle llevarlo.
+          SmartRoute calcula la ruta como Google Maps, pero dentro de su almacén —
+          evitando pasillos llenos y mostrando stock y ubicación en cada parada.
+        </p>
+        <div class="hero-ctas">
+          <button class="btn btn-primary" id="btnHeroPanel" type="button">Planificar ruta</button>
+          <button class="btn btn-secondary" data-nav="operacion" type="button">Abrir mapa</button>
+          <button class="btn btn-secondary" data-nav="productos" type="button">Ver productos</button>
+          <button class="btn btn-ghost" data-nav="como-funciona" type="button">Cómo funciona</button>
+        </div>
+        <div class="hero-mini-stats">
+          <span><strong>¿Qué hace usted?</strong> Elige robot, origen y destino</span>
+          <span><strong>¿Qué hace la app?</strong> Calcula y explica la mejor ruta</span>
+        </div>
+      </div>
+      <div class="landing-hero-visual">
+        <div class="hero-image-card maps-style">
+          <div class="warehouse-grid" id="warehouseGrid"></div>
+          <div class="floating-kpi">
+            <div class="label">¿Por qué esta ruta?</div>
+            <div class="value" id="heroKpiValue">−20%</div>
+            <div class="sub">menos congestión</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics-section" id="beneficios">
+      <div class="section-head">
+        <h3>Lo que usted puede hacer</h3>
+        <p>Herramientas pensadas para el operador del almacén</p>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="icon">🎲</div>
+          <h3>Ruta aleatoria o manual</h3>
+          <p>Pruebe con un pedido al azar o indique estante y muelle de despacho.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🤖</div>
+          <h3>Elija su robot</h3>
+          <p>Estándar, carga pesada, express o refrigerado — cada uno con tiempos distintos.</p>
+        </div>
+        <div class="card">
+          <div class="icon">📦</div>
+          <h3>Vea stock y ubicación</h3>
+          <p>SKU, unidades disponibles y pasillo exacto antes de enviar el AGV.</p>
+        </div>
+      </div>
+      <div class="metrics-grid" style="margin-top:2rem;">
+        <div class="metric-card">
+          <div class="metric-icon teal">✓</div>
+          <div class="num">Sí / No</div>
+          <div class="lbl">La app explica por qué usar la ruta verde y no la amarilla</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon blue">🗺️</div>
+          <div class="num">120×80 m</div>
+          <div class="lbl">Mapa del almacén con rutas cortas entre estantes</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon navy">⏱️</div>
+          <div class="num">min + m</div>
+          <div class="lbl">Tiempo y distancia como en un navegador GPS</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="how-section" id="como-funciona">
+      <div class="how-box">
+        <div class="how-icon">📱</div>
+        <h3>Cómo funciona (para usted)</h3>
+        <p class="how-sub">Cuatro pasos — igual de simple que pedir un viaje en un mapa</p>
+        <div class="accordion">
+          <div class="acc-item open">
+            <button class="acc-head" type="button"><span class="step-num">1</span> Elija el robot</button>
+            <div class="acc-body">Seleccione el tipo de AGV según la carga: estándar, pesado, express o refrigerado.</div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-head" type="button"><span class="step-num">2</span> Indique recogida y entrega</button>
+            <div class="acc-body">Use <strong>Ruta aleatoria</strong> para una demo o escriba el estante y el muelle. Verá el <strong>stock</strong> y la <strong>ubicación</strong>.</div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-head" type="button"><span class="step-num">3</span> Compare rutas en el mapa</button>
+            <div class="acc-body">Verde = recomendada (menos tráfico). Amarillo = directa (menos curvas). La app dice <strong>por qué sí o por qué no</strong>.</div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-head" type="button"><span class="step-num">4</span> Envíe el robot</button>
+            <div class="acc-body">Si está de acuerdo, pulse <strong>Enviar robot</strong>. Si prefiere la ruta directa, puede comparar antes.</div>
+          </div>
+        </div>
+        <button class="btn btn-navy" data-nav="operacion" type="button">Abrir mapa del almacén</button>
+      </div>
+    </section>
+
+    <section class="about-section" id="sobre-app">
+      <div class="about-inner">
+        <div class="section-head">
+          <h3>Sobre SmartRoute WMS</h3>
+          <p>Navegación inteligente dentro de su centro de distribución</p>
+        </div>
+        <div class="about-text panel">
+          <p>
+            Imagínese <strong>Google Maps</strong>, pero para un almacén de tecnología de 120×80 metros:
+            usted marca dónde recoger mercancía y dónde entregarla, y el sistema traza la ruta
+            evitando pasillos congestionados en hora pico.
+          </p>
+          <p style="margin-top:1rem;">
+            No necesita saber de algoritmos. La aplicación le muestra el mapa interactivo (zoom, clic en nodos),
+            el stock en el estante, el robot más adecuado y una explicación clara:
+            <em>¿por qué esta ruta sí y la directa no?</em>
+          </p>
+          <div class="install-box" style="margin-top:1.25rem;">
+            <p class="eyebrow eyebrow-purple">CÓMO EJECUTAR</p>
+            <ol class="install-steps">
+              <li>Abra una terminal en la carpeta <code>APP hecha</code></li>
+              <li>Ejecute <code>run.bat</code> o <code>py -3 main.py</code></li>
+              <li>Abra <a href="http://127.0.0.1:5000">http://127.0.0.1:5000</a> (no abra el HTML directamente)</li>
+              <li>Si el puerto 5000 está ocupado: <code>set PORT=5055</code> y vuelva a ejecutar</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="landing-footer">
+      <p>© 2026 SmartRoute WMS · Navegación para almacenes inteligentes</p>
+    </footer>
+  </div>
+
+  <!-- MAPA / NAVEGACIÓN -->
+  <div id="operacion-view" class="view">
+    <div class="op-page">
+      <div class="op-top">
+        <div>
+          <p class="eyebrow">MAPA DEL ALMACÉN</p>
+          <h2 id="tripTitle">Planifique su ruta</h2>
+          <p class="op-status" id="opStatus">Elija origen, destino y robot en Planificar ruta.</p>
+        </div>
+        <div class="op-actions">
+          <button class="btn btn-outline" id="btnBackHome" type="button">← Inicio</button>
+          <button class="btn btn-outline" id="btnRandomOp" type="button">🎲 Aleatoria</button>
+          <button class="btn btn-outline" id="btnOpenDrawerOp" type="button">Planificar</button>
+          <button class="btn btn-primary" id="btnCalcOp" type="button">Calcular</button>
+        </div>
+      </div>
+
+      <div class="route-history-bar panel" id="routeHistoryBar" hidden aria-label="Historial de rutas recientes">
+        <span class="route-history-label">Rutas recientes:</span>
+        <div class="route-history-chips" id="routeHistoryChips"></div>
+      </div>
+
+      <div class="op-search-bar panel">
+        <label for="searchQueryOp">Buscar producto o nodo</label>
+        <div class="op-search-row">
+          <input type="search" id="searchQueryOp" placeholder="SSD, SKU-00437, nodo 437…" autocomplete="off">
+          <button class="btn btn-outline" id="btnSearchOp" type="button">Buscar</button>
+        </div>
+        <div class="search-results" id="searchResultsOp"></div>
+      </div>
+
+      <div class="trip-bar panel" id="tripBar" style="display:none;">
+        <div class="trip-bar-main">
+          <span class="trip-time" id="tripTime">—</span>
+          <span class="trip-dist" id="tripDist">—</span>
+          <span class="trip-robot" id="tripRobot">—</span>
+        </div>
+        <div class="trip-points">
+          <div><span class="dot green"></span> <span id="tripOriginLabel">Origen</span></div>
+          <div class="trip-line"></div>
+          <div><span class="dot pink"></span> <span id="tripDestLabel">Destino</span></div>
+        </div>
+      </div>
+
+      <div class="op-main">
+        <div class="op-map-card maps-frame">
+          <div class="op-map-header">
+            <span>🗺️ Vista del almacén</span>
+            <span class="legend"><i class="leg leg-dijk"></i> Recomendada <i class="leg leg-bfs"></i> Directa</span>
+          </div>
+          <div class="map-container" id="mapContainer">
+            <div class="map-placeholder">
+              <div class="map-placeholder-icon">📍</div>
+              <p>Calcule una ruta para ver el mapa tipo GPS</p>
+              <button class="btn btn-primary" id="btnCalcFromOp" type="button">Calcular ruta</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="op-side">
+          <div class="panel stock-card" id="stockCard">
+            <h3>📦 Recogida</h3>
+            <p class="stock-loc" id="stockOriginLoc">—</p>
+            <p class="stock-sku" id="stockOriginSku">—</p>
+            <div class="stock-units">
+              <span>Disponible</span>
+              <strong id="stockOriginUnits">—</strong>
+            </div>
+            <div class="stock-status" id="stockOriginStatus">—</div>
+          </div>
+
+          <div class="panel stock-card stock-card-dest" id="stockDestCard" style="display:none;">
+            <h3>🚚 Entrega</h3>
+            <p class="stock-loc" id="stockDestLoc">—</p>
+            <p class="stock-sku" id="stockDestTipo">—</p>
+          </div>
+
+          <div class="panel verdict-card" id="verdictCard" style="display:none;">
+            <h3 id="verdictTitle">¿Por qué esta ruta?</h3>
+            <p class="verdict-badge" id="verdictBadge">—</p>
+            <ul class="verdict-list" id="verdictYes"></ul>
+            <p class="verdict-sub">¿Por qué no ir directo?</p>
+            <ul class="verdict-list muted" id="verdictNo"></ul>
+            <div class="verdict-actions">
+              <button class="btn btn-primary" id="btnUsarRuta" type="button">✓ Usar ruta verde</button>
+              <button class="btn btn-outline" id="btnVerDirecta" type="button">Ver ruta directa</button>
+            </div>
+          </div>
+
+          <div class="panel kpi-compact">
+            <div class="kpi-row"><span>Tiempo</span><strong id="kpiTime">—</strong></div>
+            <div class="kpi-row"><span>Distancia</span><strong id="kpiDist">—</strong></div>
+            <div class="kpi-row highlight"><span>Ahorro</span><strong id="kpiSave">—</strong></div>
+            <div class="kpi-row"><span>Energía</span><strong id="kpiEnergy">—</strong></div>
+            <div class="kpi-row"><span>Tráfico</span><strong id="kpiTraffic">—</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="op-tabs">
+        <button class="op-tab active" data-tab="analisis" type="button">Comparar rutas</button>
+        <button class="op-tab" data-tab="pasillos" type="button">Pasillos en ruta</button>
+        <button class="op-tab" data-tab="infra" type="button">Pasillos críticos</button>
+      </div>
+      <div class="op-tab-panel active" id="tab-analisis">
+        <div id="analisisContent"><div class="alert alert-info">Calcule una ruta para comparar verde vs amarilla.</div></div>
+      </div>
+      <div class="op-tab-panel" id="tab-pasillos">
+        <div id="pasillosContent"><div class="alert alert-info">Calcule una ruta para ver qué hay en cada pasillo del recorrido.</div></div>
+      </div>
+      <div class="op-tab-panel" id="tab-infra">
+        <div class="infra-intro panel">
+          <p class="eyebrow eyebrow-purple">PASILLOS CRÍTICOS</p>
+          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.65;">
+            Dos tipos: <strong>estructurales</strong> (red MST — no se pueden cerrar sin riesgo de desconexión)
+            y <strong>congestionados</strong> (corredores saturados en la franja actual).
+            Pulse el botón para ver la lista en texto — sin mapa.
+          </p>
+        </div>
+        <div class="infra-toolbar">
+          <button class="btn btn-primary" id="btnCritical" type="button">Ver pasillos críticos</button>
+          <button class="btn btn-outline" id="btnClose" type="button">Simular cierre (UFDS)</button>
+          <button class="btn btn-outline" id="btnFloyd" type="button">Matriz Floyd-Warshall</button>
+          <button class="btn btn-outline" id="btnReset" type="button">Restaurar pasillos</button>
+        </div>
+        <div id="infraMessage"></div>
+        <div id="criticalList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATÁLOGO PRODUCTOS -->
+  <div id="productos-view" class="view view-productos">
+    <div class="productos-page">
+      <div class="productos-hero">
+        <p class="eyebrow eyebrow-purple">INVENTARIO</p>
+        <h2>Productos en el almacén</h2>
+        <p>Consulte stock, pasillo y sector. Elija un producto para planificar la recogida o trace la ruta al muelle.</p>
+        <div class="productos-search-row">
+          <input type="search" id="productosSearch" placeholder="Buscar: SSD, Monitor, SKU-00437, nodo 437…" autocomplete="off">
+          <button class="btn-purple" id="btnProductosSearch" type="button">Buscar</button>
+          <button class="btn btn-outline" id="btnProductosClear" type="button">Ver todos</button>
+        </div>
+      </div>
+
+      <div class="productos-kpis" id="productosKpis">
+        <div class="productos-kpi"><span class="kpi-ico">📦</span><strong id="kpiTipos">—</strong><span>tipos</span></div>
+        <div class="productos-kpi"><span class="kpi-ico">🗄️</span><strong id="kpiEstantes">—</strong><span>estantes</span></div>
+        <div class="productos-kpi"><span class="kpi-ico">✅</span><strong id="kpiOk">—</strong><span>stock OK</span></div>
+        <div class="productos-kpi"><span class="kpi-ico">⚠️</span><strong id="kpiBajo">—</strong><span>bajo / crítico</span></div>
+      </div>
+
+      <div class="productos-toolbar">
+        <p class="productos-stats" id="productosStats">Cargando catálogo…</p>
+        <label class="productos-sort">
+          Ordenar
+          <select id="productosSort">
+            <option value="nombre">Nombre A–Z</option>
+            <option value="stock-desc">Más stock</option>
+            <option value="stock-asc">Menos stock</option>
+            <option value="sector">Sector</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="productos-chips" id="productosChips"></div>
+
+      <div class="productos-layout">
+        <div class="productos-grid" id="productosGrid"></div>
+        <aside class="producto-detalle panel" id="productoDetalle" hidden>
+          <p class="eyebrow eyebrow-purple">DETALLE</p>
+          <div id="productoDetalleContent">
+            <p class="detalle-placeholder">Seleccione un producto para ver pasillo, SKU y acciones.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/map.js?v=11"></script>
+  <script src="/static/js/app.js?v=11"></script>
+</body>
+</html>
