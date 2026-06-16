@@ -40,16 +40,14 @@ if errorlevel 1 (
 )
 
 echo.
-echo === Listo ===
+echo === Commit local listo ===
 echo.
-echo 1. Cree un repo en https://github.com/new  (vacio, sin README)
-echo 2. Luego ejecute (cambie TU_USUARIO y TU-REPO):
+echo Para crear el repo en GitHub y subir todo automaticamente, ejecute:
+echo    publicar-github.bat
 echo.
-echo    "%GIT%" remote add origin https://github.com/TU_USUARIO/TU-REPO.git
-echo    "%GIT%" branch -M main
-echo    "%GIT%" push -u origin main
+echo (Requiere GitHub CLI: winget install GitHub.cli y sesion con gh auth login)
 echo.
-echo 3. Despliegue en https://render.com - Root Directory: APP hecha
-echo    Ver APP hecha\DEPLOY.md
+echo Despliegue web: https://render.com - Root Directory: APP hecha
+echo Ver APP hecha\DEPLOY.md
 echo.
 pause
