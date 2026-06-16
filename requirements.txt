@@ -1,1 +1,5 @@
--r APP hecha/requirements.txt
+networkx>=3.2
+numpy>=1.26
+matplotlib>=3.8
+flask>=3.0
+gunicorn>=22.0

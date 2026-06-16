@@ -106,6 +106,7 @@ En Render → **Environment**:
 
 ## Problemas frecuentes
 
-- **502 / timeout:** el plan gratis es lento al inicio; espera y recarga.
+- **Build failed: `No such file ... '/APP'`** — la carpeta se llama `APP hecha` (con espacio). En Render deja **Root Directory vacío** y usa el `Procfile` de la raíz, **o** pon Root Directory exactamente `APP hecha` y Build Command `pip install -r requirements.txt` (sin rutas con espacio).
+- **Python 3.14 en logs** — en Settings → Environment añade `PYTHON_VERSION` = `3.12.3`.
 - **Ruta /api falla:** verifica que **Root Directory** sea `APP hecha`, no la raíz del repo.
 - **No abrir `index.html` local:** siempre usar la URL `https://...` del servidor.
